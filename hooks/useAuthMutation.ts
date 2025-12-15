@@ -9,11 +9,14 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: async (data: any) => {
-      const response = await api.post("/auth/login", data); // Expecting username/password (OAuth2 form)
+      // Backend now expects JSON { email, password }
+      const response = await api.post("/auth/login", data);
       return response.data;
     },
     onSuccess: (data) => {
-      login(data.access_token);
+      console.log("Login success data:", data);
+      // data should contain { access_token, user: { id, name, email ... } }
+      login(data.access_token, data.user);
       toast.success("Logged in successfully!");
     },
     onError: (error: any) => {

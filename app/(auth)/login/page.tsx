@@ -42,18 +42,12 @@ export default function LoginPage() {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // API expects form data for OAuth2 usually, but our intercept uses JSON?
-    // Let's check api/auth.py again.
-    // It uses OAuth2PasswordRequestForm = Depends() which parses 'username' and 'password' from form-data usually.
-    // However, fastAPI can be tricky. Standard OAuth2 form request is x-www-form-urlencoded.
-    // Let's see if our Axios setup handles this.
-
-    // Changing approach slightly: Use URLSearchParams to send as form-data
-    const params = new URLSearchParams();
-    params.append("username", values.username);
-    params.append("password", values.password);
-
-    loginMutation.mutate(params);
+    // API now expects JSON { email, password }
+    // useLogin mutation handles the API call with JSON default
+    loginMutation.mutate({
+      email: values.username, // mapping username field to email
+      password: values.password,
+    });
   }
 
   return (

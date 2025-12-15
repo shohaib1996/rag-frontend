@@ -8,7 +8,6 @@ import {
   ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
-import api from "@/lib/api";
 
 type User = {
   id: string;
@@ -19,7 +18,7 @@ type User = {
 type AuthContextType = {
   user: User | null;
   token: string | null;
-  login: (token: string) => void;
+  login: (token: string, user: User) => void;
   logout: () => void;
   isLoading: boolean;
 };
@@ -34,31 +33,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
+    const storedUser = localStorage.getItem("user");
+
     if (storedToken) {
       setToken(storedToken);
-      // Optional: Validate token or fetch user profile from backend
-      // For now, we'll try to decode it if it was a JWT, but since we don't have a verify endpoint handy in the plan yet,
-      // we will implicitly trust it or let the first API call fail with 401.
-
-      // However, a better UX is to fetch the current user.
-      // We don't have a /me endpoint in the read backend files,
-      // but typically one would exist or we'd rely on 401s to log out.
-      // Let's assume we are logged in if token exists for now.
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch (e) {
+          console.error("Failed to parse user from local storage", e);
+        }
+      }
       setIsLoading(false);
     } else {
       setIsLoading(false);
     }
   }, []);
 
-  const login = (newToken: string) => {
+  const login = (newToken: string, newUser: User) => {
     localStorage.setItem("token", newToken);
+    localStorage.setItem("user", JSON.stringify(newUser));
     setToken(newToken);
-    // Ideally fetch user details here
+    setUser(newUser);
     router.push("/");
   };
 
   const logout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setToken(null);
     setUser(null);
     router.push("/login");
