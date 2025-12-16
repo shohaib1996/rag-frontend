@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "https://rag-project-t4mo.onrender.com/api",
+  baseURL: "https://rag-project-production-71a0.up.railway.app/api",
   headers: {
     "Content-Type": "application/json",
   },

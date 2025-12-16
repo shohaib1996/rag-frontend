@@ -20,17 +20,33 @@ export function ChatInterface() {
       // scrollRef.current.scrollIntoView({ behavior: "smooth" });
       // Getting the scroll area viewport usually requires accessing the underlying primitive or just setting generic ref.
       // For Shadcn ScrollArea, we can target the last message.
-      const scrollContainer = document.getElementById("chat-scroll-area");
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      const root = document.getElementById("chat-scroll-area");
+      // If the user added overflow-y-auto to the root, it might be the scroll container
+      if (
+        root &&
+        root.scrollTop !== undefined &&
+        root.scrollHeight > root.clientHeight
+      ) {
+        root.scrollTop = root.scrollHeight;
+      } else {
+        // Otherwise try to find the inner viewport (Radix UI)
+        const viewport = root?.querySelector(
+          '[data-slot="scroll-area-viewport"]'
+        );
+        if (viewport) {
+          viewport.scrollTop = viewport.scrollHeight;
+        }
       }
     }
   }, [messages, isLoading]); // Scroll when messages change or loading starts/stops
 
   return (
-    <div className="flex flex-col h-full w-full max-w-4xl mx-auto relative">
+    <div className="flex flex-col h-full w-full max-w-4xl mx-auto relative overflow-hidden">
       {/* Messages Area */}
-      <ScrollArea className="flex-1" id="chat-scroll-area">
+      <ScrollArea
+        className="flex-1 overflow-y-auto no-scrollbar"
+        id="chat-scroll-area"
+      >
         <div
           className={`flex flex-col p-4 space-y-6 pb-20 ${
             messages.length > 0

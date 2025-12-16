@@ -1,18 +1,49 @@
-"use client";
-
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { ModeToggle } from "@/components/ModeToggle";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { LogOut, Menu, Plus, MessageSquare } from "lucide-react";
+import { LogOut, Menu, Plus, MessageSquare, Trash2 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { TrainBotModal } from "@/components/knowledge/TrainBotModal";
 import { DocumentsListModal } from "@/components/knowledge/DocumentsListModal";
 import { BrainCircuit, Database } from "lucide-react";
+import api from "@/lib/api";
+
+type Conversation = {
+  id: string;
+  title: string;
+  updated_at: string;
+};
 
 export function ChatLayout({ children }: { children: ReactNode }) {
   const { logout, user } = useAuth();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const fetchConversations = async () => {
+    try {
+      const res = await api.get("/conversations");
+      setConversations(res.data);
+    } catch (error) {
+      console.error("Failed to fetch conversations", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchConversations();
+  }, []);
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    try {
+      await api.delete(`/conversations/${id}`);
+      setConversations(conversations.filter((c) => c.id !== id));
+      if (selectedId === id) setSelectedId(null);
+    } catch (error) {
+      console.error("Failed to delete conversation", error);
+    }
+  };
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -21,6 +52,14 @@ export function ChatLayout({ children }: { children: ReactNode }) {
           variant="outline"
           className="w-full justify-start gap-2"
           size="lg"
+          onClick={() => {
+            setSelectedId(null);
+            // We need a way to tell children to reset.
+            // For now, simpler to just reload or use context/URL.
+            // Let's rely on window.location or similar if we can't pass props down easily
+            // But actually, we are wrapping children. We should probably cloneElement or use Context.
+            window.location.href = "/";
+          }}
         >
           <Plus className="h-4 w-4" />
           New chat
@@ -32,21 +71,36 @@ export function ChatLayout({ children }: { children: ReactNode }) {
           Recent
         </div>
         <div className="space-y-1">
-          {/* Placeholder for history */}
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-sm font-normal truncate"
-          >
-            <MessageSquare className="mr-2 h-4 w-4 opacity-50" />
-            Previous conversation...
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-sm font-normal truncate"
-          >
-            <MessageSquare className="mr-2 h-4 w-4 opacity-50" />
-            Project brainstorming
-          </Button>
+          {conversations.map((conv) => (
+            <div
+              key={conv.id}
+              className={`group flex items-center gap-2 px-2 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors ${
+                selectedId === conv.id
+                  ? "bg-accent/50 text-accent-foreground"
+                  : "hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+              }`}
+              onClick={() => {
+                setSelectedId(conv.id);
+                // Hacky way to navigate for now if we don't have a router setup for ids
+                // Ideally we use Next.js dynamic routes: /chat/[id]
+                // But sticking to single page for now:
+                window.history.pushState({}, "", `?conversationId=${conv.id}`);
+                // Dispatch custom event to notify ChatInterface
+                window.dispatchEvent(new Event("conversationChanged"));
+              }}
+            >
+              <MessageSquare className="h-4 w-4 shrink-0" />
+              <span className="truncate flex-1">{conv.title}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => handleDelete(e, conv.id)}
+              >
+                <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+              </Button>
+            </div>
+          ))}
         </div>
       </div>
 
